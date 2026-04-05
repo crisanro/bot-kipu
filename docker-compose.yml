@@ -14,9 +14,9 @@ services:
       # AWS Credentials (se inyectarán desde el panel de Dokploy o tu .env local)
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-2}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
       # Ponemos el ARN completo de tu secreto como vimos en la prueba
-      - AWS_SECRET_NAME=${AWS_SECRET_NAME:-arn:aws:secretsmanager:us-east-2:180294182906:secret:kipu-api-Ts55BR}
+      - AWS_SECRET_NAME=${AWS_SECRET_NAME}
       
       # Forzamos a la API a usar el Redis de este docker-compose
       - REDIS_URL=redis://redis:6379/0
