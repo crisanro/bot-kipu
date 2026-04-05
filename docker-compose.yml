@@ -1,1 +1,38 @@
+version: '3.8'
 
+services:
+  # 1. Tu aplicación FastAPI (Kipu Bot)
+  api:
+    build: .
+    container_name: wapti_kipu_api
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    environment:
+      # AWS Credentials (se inyectarán desde el panel de Dokploy o tu .env local)
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-2}
+      # Ponemos el ARN completo de tu secreto como vimos en la prueba
+      - AWS_SECRET_NAME=${AWS_SECRET_NAME:-arn:aws:secretsmanager:us-east-2:180294182906:secret:kipu-api-Ts55BR}
+      
+      # Forzamos a la API a usar el Redis de este docker-compose
+      - REDIS_URL=redis://redis:6379/0
+
+  # 2. Tu base de datos temporal en memoria (Redis)
+  redis:
+    image: redis:7-alpine
+    container_name: wapti_kipu_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    # Activamos las notificaciones de expiración directamente desde el arranque (seguro de vida para el listener)
+    command: redis-server --notify-keyspace-events Ex
+
+    networks:
+      - red_infraestructura
+networks:
+  red_infraestructura:
+    external: true
