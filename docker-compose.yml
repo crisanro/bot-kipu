@@ -4,7 +4,7 @@ services:
   # 1. Tu aplicación FastAPI (Kipu Bot)
   api:
     build: .
-    container_name: wapti_kipu_api
+    container_name: kipu_bot_ws_fact
     restart: always
     ports:
       - "8000:8000"
