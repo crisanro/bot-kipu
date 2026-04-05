@@ -8,7 +8,7 @@ TIEMPO_EXPIRACION = 600  # 10 minutos
 async def conectar_redis():
     global redis_pool
     # Si REDIS_URL no está en config, usamos localhost por defecto
-    url = REDIS_URL if REDIS_URL else "redis://localhost:6379/0"
+    url = REDIS_URL if REDIS_URL else "redis://redis:6379/0"
     
     try:
         redis_pool = redis.from_url(url, decode_responses=True)
