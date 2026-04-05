@@ -17,10 +17,11 @@ services:
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
       # Ponemos el ARN completo de tu secreto como vimos en la prueba
       - AWS_SECRET_NAME=${AWS_SECRET_NAME}
-      
       # Forzamos a la API a usar el Redis de este docker-compose
       - REDIS_URL=redis://redis:6379/0
-
+    networks:
+      - red_infraestructura
+      
   # 2. Tu base de datos temporal en memoria (Redis)
   redis:
     image: redis:7-alpine
@@ -30,9 +31,9 @@ services:
       - "6379:6379"
     # Activamos las notificaciones de expiración directamente desde el arranque (seguro de vida para el listener)
     command: redis-server --notify-keyspace-events Ex
-
     networks:
       - red_infraestructura
+      
 networks:
   red_infraestructura:
     external: true
