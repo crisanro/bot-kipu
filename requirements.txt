@@ -1,0 +1,15 @@
+# Servidor Web y API
+fastapi==0.115.0
+uvicorn==0.31.0
+
+# Peticiones HTTP
+httpx==0.27.2
+
+# Variables de entorno
+python-dotenv==1.0.1
+
+# Base de Datos PostgreSQL (Esta versión 0.30.0 ya soporta Python 3.13)
+asyncpg==0.30.0
+
+# Base de Datos Redis
+redis==5.2.0
