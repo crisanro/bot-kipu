@@ -3,7 +3,7 @@ import redis.asyncio as redis
 from config import REDIS_URL
 
 redis_pool = None
-TIEMPO_EXPIRACION = 60  # 10 minutos
+TIEMPO_EXPIRACION = 600  # 10 minutos
 
 async def conectar_redis():
     global redis_pool
