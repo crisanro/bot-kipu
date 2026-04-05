@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-@app.get("/webhook")
+@app.get("/bot/v1/webhook")
 async def verificar_webhook(request: Request):
     mode = request.query_params.get("hub.mode")
     token = request.query_params.get("hub.verify_token")
@@ -43,7 +43,7 @@ async def verificar_webhook(request: Request):
         return int(challenge)
     raise HTTPException(status_code=403, detail="Token de verificación inválido")
 
-@app.post("/webhook")
+@app.post("/bot/v1/webhook")
 async def recibir_mensajes(request: Request, background_tasks: BackgroundTasks):
     datos = await request.json()
     # Procesamos en segundo plano para responderle a Meta en < 3 segundos
