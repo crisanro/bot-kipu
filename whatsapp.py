@@ -429,44 +429,36 @@ async def enviar_documento_pdf(telefono: str, clave_acceso: str):
         print(f"❌ Error en el proceso de enviar PDF: {e}")
 
 async def enviar_documento_xml(telefono: str, clave_acceso: str):
-    url_xml = f"{KIPU_API_PUBLIC_URL}/xml/{clave_acceso}" 
-    headers_kipu = {"origin": "kipu.ec"} 
+    url_xml = f"{KIPU_API_PUBLIC_URL}/xml/{clave_acceso}"
+    headers_kipu = {"origin": "kipu.ec"}
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            # 1. Descarga y verifica qué recibimos de Kipu
             resp_xml = await client.get(url_xml, headers=headers_kipu)
             
             if resp_xml.status_code != 200:
-                print(f"⚠️ Error Kipu: La URL {url_xml} devolvió status {resp_xml.status_code}")
+                print(f"❌ KIPU ERROR: Status {resp_xml.status_code} al bajar XML")
                 return
 
             xml_bytes = resp_xml.content
-            # Verificamos si lo que bajamos empieza con '<?xml' para estar seguros
-            if not xml_bytes.strip().startswith(b"<?xml") and not xml_bytes.strip().startswith(b"<"):
-                print(f"⚠️ Alerta: El contenido descargado no parece un XML válido. Empieza con: {xml_bytes[:20]}")
-
             nombre_archivo = f"Factura-{clave_acceso}.xml"
 
-            # 2. Subida a Meta con headers limpios
+            # 🔥 CONFIGURACIÓN DE SUBIDA
             headers_media = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
-            
-            # Intentamos con 'document/xml' que es un punto medio aceptado por Meta
-            files = {"file": (nombre_archivo, xml_bytes, "application/xml")}
+            # Usamos application/octet-stream para que Meta no intente 'validar' el XML
+            files = {"file": (nombre_archivo, xml_bytes, "application/octet-stream")}
             data = {"messaging_product": "whatsapp"}
             
-            print(f"🚀 Intentando subir XML a Meta para {telefono}...")
             resp_media = await client.post(META_MEDIA_URL, headers=headers_media, data=data, files=files)
-            
-            res_media_json = resp_media.json()
-            media_id = res_media_json.get("id")
+            media_data = resp_media.json()
+            media_id = media_data.get("id")
 
             if not media_id:
-                print(f"❌ Meta rechazó el archivo XML: {res_media_json}")
+                # ESTO ES LO QUE NECESITAMOS VER EN TU CONSOLA SI FALLA:
+                print(f"❌ META UPLOAD ERROR: {media_data}") 
                 return
 
-            # 3. Envío del mensaje
-            print(f"✅ Media ID obtenido: {media_id}. Enviando mensaje...")
+            # 🔥 ENVÍO FINAL
             payload = {
                 "messaging_product": "whatsapp",
                 "to": telefono,
@@ -476,17 +468,18 @@ async def enviar_documento_xml(telefono: str, clave_acceso: str):
                     "filename": nombre_archivo
                 }
             }
-            resp_envio = await client.post(META_API_URL, headers=HEADERS, json=payload)
             
-            res_envio_json = resp_envio.json()
-            if "error" in res_envio_json:
-                print(f"❌ Error al enviar el mensaje de documento: {res_envio_json}")
+            resp_envio = await client.post(META_API_URL, headers=HEADERS, json=payload)
+            envio_data = resp_envio.json()
+            
+            if "error" in envio_data:
+                print(f"❌ META SEND ERROR: {envio_data}")
             else:
-                await _registrar_salida(telefono, "document", payload, res_envio_json)
-                print(f"🏁 Proceso XML completado con éxito para {telefono}")
+                await _registrar_salida(telefono, "document", payload, envio_data)
+                print(f"✅ XML Enviado con éxito: {media_id}")
             
     except Exception as e:
-        print(f"❌ Error crítico en enviar_documento_xml: {e}")
+        print(f"❌ EXCEPCIÓN EN XML: {str(e)}")
 
 
 async def enviar_botones_mas_items(telefono: str, cantidad_items: int):
