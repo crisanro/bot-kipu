@@ -101,6 +101,36 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
     elif tipo == "text":
         texto_usuario = mensaje_wa["text"]["body"].lower().strip()
 
+
+    if tipo == "text":
+        texto_usuario = mensaje_wa["text"]["body"].lower().strip()
+
+    # --- NUEVA LÓGICA: COMANDO DESCARGAR ---
+    if texto_usuario.startswith("descargar"):
+        partes = texto_usuario.split() # Separa por espacios
+        
+        # Caso 1: Solo envió "descargar"
+        if len(partes) == 1:
+            await enviar_texto(telefono, "Para poder enviarte la factura, por favor ayúdame escribiendo la palabra *Descargar* seguida de los 49 dígitos de tu clave de acceso.\n\nEjemplo: _Descargar 0102202301179..._")
+            return
+
+        # Caso 2: Envió "descargar clave"
+        clave_acceso = partes[1]
+        if len(clave_acceso) == 49 and clave_acceso.isdigit():
+            await enviar_texto(telefono, "🔍 Localizando tus archivos, un momento por favor...")
+            
+            # Importamos y ejecutamos las funciones de whatsapp.py
+            from whatsapp import enviar_documento_pdf, enviar_documento_xml
+            await enviar_documento_pdf(telefono, clave_acceso)
+            await enviar_documento_xml(telefono, clave_acceso)
+            
+            await enviar_texto(telefono, "✅ Archivos enviados con éxito.")
+            # Si quieres cerrar la sesión actual si existía una:
+            await eliminar_sesion(telefono)
+        else:
+            await enviar_texto(telefono, "⚠️ La clave de acceso proporcionada no parece ser válida (debe tener 49 dígitos numéricos). Revisa el número e intenta de nuevo.")
+        return
+
     # 2. COMANDO DE SALIDA CORTÉS
     if texto_usuario in ["cancelar", "salir", "chao", "adios", "adiós"] or id_interactivo == "btn_cancelar":
         await eliminar_sesion(telefono)
