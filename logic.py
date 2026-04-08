@@ -121,6 +121,7 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
             
             # Importamos y ejecutamos las funciones de whatsapp.py
             await enviar_documento_pdf(telefono, clave_acceso)
+            await asyncio.sleep(1.5) # Dale 2 segundos de respiro a Meta
             await enviar_documento_xml(telefono, clave_acceso)
             
             await enviar_texto(telefono, "✅ Archivos enviados con éxito.")
