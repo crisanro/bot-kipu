@@ -8,7 +8,7 @@ from whatsapp import (
     enviar_botones_monto_pago,
     enviar_lista_metodos_pago,
     enviar_resumen_final,
-    enviar_botones_iva, enviar_botones_mas_items
+    enviar_botones_iva, enviar_botones_mas_items,enviar_qr_seguimiento, enviar_documento_pdf,enviar_documento_xml
 )
 from redis_client import guardar_sesion, eliminar_sesion, obtener_sesion
 from kipu_api import verificar_usuario_kipu
@@ -120,7 +120,6 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
             await enviar_texto(telefono, "🔍 Localizando tus archivos, un momento por favor...")
             
             # Importamos y ejecutamos las funciones de whatsapp.py
-            from whatsapp import enviar_documento_pdf, enviar_documento_xml
             await enviar_documento_pdf(telefono, clave_acceso)
             await enviar_documento_xml(telefono, clave_acceso)
             
@@ -497,7 +496,6 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
                 if estado in ["DEVUELTA", "RECHAZADO"]:
                     await enviar_texto(telefono, f"⚠️ *Factura {estado}*\nEl SRI o nuestro sistema reportó: _{mensaje_api}_")
                 else:
-                    from whatsapp import enviar_qr_seguimiento, enviar_documento_pdf
                     await enviar_qr_seguimiento(telefono, clave_acceso)
                     if estado == "AUTORIZADO":
                         await enviar_documento_pdf(telefono, clave_acceso)
