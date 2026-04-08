@@ -437,15 +437,18 @@ async def enviar_documento_xml(telefono: str, clave_acceso: str):
             resp_xml = await client.get(url_xml, headers=headers_kipu)
             
             if resp_xml.status_code != 200:
-                print(f"⚠️ XML no disponible en Kipu: {resp_xml.status_code}")
+                print(f"⚠️ XML no disponible: {resp_xml.status_code}")
                 return
 
-            xml_bytes = resp_xml.content
+            # Limpiamos posibles espacios en blanco al inicio/final del XML
+            xml_bytes = resp_xml.content.strip() 
             nombre_archivo = f"Factura-{clave_acceso}.xml"
 
-            # 🔥 EL TRUCO FINAL: Engañamos a Meta diciendo que es un PDF
-            # Pero mantenemos la extensión .xml en el nombre del archivo.
-            files = {"file": (nombre_archivo, xml_bytes, "application/pdf")}
+            # 🚀 EL CAMBIO CLAVE:
+            # Usamos 'text/plain' PERO el nombre del archivo DEBE terminar en .xml
+            # Meta añade el .txt solo si cree que el archivo NO es texto. 
+            # Al limpiar los bytes con .strip(), aseguramos que Meta lo vea como texto limpio.
+            files = {"file": (nombre_archivo, xml_bytes, "text/plain")}
             data = {"messaging_product": "whatsapp"}
             
             headers_media = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
@@ -455,26 +458,25 @@ async def enviar_documento_xml(telefono: str, clave_acceso: str):
             media_id = res_json.get("id")
 
             if not media_id:
-                print(f"❌ Meta sigue rechazando el archivo: {res_json}")
+                print(f"❌ Error de Meta: {res_json}")
                 return
 
-            # Enviamos el mensaje con el ID obtenido
             payload = {
                 "messaging_product": "whatsapp",
                 "to": telefono,
                 "type": "document",
                 "document": {
                     "id": media_id,
-                    "filename": nombre_archivo # WhatsApp mostrará ".xml"
+                    "filename": nombre_archivo
                 }
             }
             
             resp_envio = await client.post(META_API_URL, headers=HEADERS, json=payload)
             await _registrar_salida(telefono, "document", payload, resp_envio.json())
-            print(f"✅ XML enviado exitosamente como '{nombre_archivo}'")
+            print(f"✅ XML enviado como documento: {nombre_archivo}")
 
     except Exception as e:
-        print(f"❌ Error en enviar_documento_xml: {e}")
+        print(f"❌ Error: {e}")
 
 
 async def enviar_botones_mas_items(telefono: str, cantidad_items: int):
