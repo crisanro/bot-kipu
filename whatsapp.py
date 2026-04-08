@@ -451,7 +451,7 @@ async def enviar_documento_xml(telefono: str, clave_acceso: str):
             
             # 2. Subir con nombre .txt para que Meta lo acepte
             files = {
-                "file": (f"Factura-{clave_acceso}.txt", xml_bytes, "text/plain")
+                "file": (nombre_archivo, xml_bytes, "text/plain")
             }
             data = {"messaging_product": "whatsapp"}
             headers_media = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
