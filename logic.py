@@ -1,3 +1,4 @@
+import asyncio
 from whatsapp import (
     enviar_texto, 
     enviar_botones_inicio, 
