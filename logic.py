@@ -146,34 +146,40 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
         return
 
     # 3. Eliminar API Key (Inicia Flujo)
+    # 3. Eliminar API Key (Generar PIN de seguridad)
     elif "apikey eliminar" in texto_usuario.lower():
-    telefono = sesion.get("telefono")
-    
-    # 1. Informamos que estamos procesando
-    await enviar_texto(telefono, "🛡️ Generando código de seguridad para eliminación...")
+        # Validamos primero que el usuario exista en Kipu
+        validacion = await verificar_usuario_kipu(telefono)
+        
+        if validacion.get("status") == "ok":
+            from kipu_api import solicitar_pin_auth
+            
+            # Informamos brevemente antes de lanzar el PIN
+            await enviar_texto(telefono, "🛡️ Generando código de seguridad para eliminación...")
 
-    # 2. Llamamos a la API para crear el PIN (usando solo el teléfono)
-    from kipu_api import solicitar_pin_auth
-    res = await solicitar_pin_auth(
-        whatsapp_number=telefono,
-        tipo_accion="ELIMINAR_TOKEN"
-    )
+            # Solicitamos el PIN para la acción de eliminar
+            resp = await solicitar_pin_auth(
+                whatsapp_number=telefono,
+                tipo_accion="ELIMINAR_TOKEN"
+            )
 
-    if res.get("ok"):
-        pin = res.get("pin")
-        # 3. Entregamos el PIN de una vez
-        mensaje = (
-            f"⚠️ *CÓDIGO DE ELIMINACIÓN*\n\n"
-            f"Tu PIN es: *{pin}*\n\n"
-            f"Ingresa este código en la plataforma web de KIPU para confirmar la revocación de tu API Key.\n"
-            f"_Válido por 10 minutos._"
-        )
-        await enviar_texto(telefono, mensaje)
-    else:
-        # Si el teléfono no está registrado en profiles, FastAPI devolverá error
-        await enviar_texto(telefono, "❌ No se pudo generar el PIN. Asegúrate de que tu número esté vinculado a tu cuenta de KIPU.")
-
-    await eliminar_sesion(telefono)
+            if resp.get("ok"):
+                pin = resp.get("pin")
+                mensaje = (
+                    f"⚠️ *CÓDIGO DE ELIMINACIÓN*\n\n"
+                    f"Tu PIN es: *{pin}*\n\n"
+                    f"Ingresa este código en la plataforma web de KIPU para confirmar la revocación de tu API Key.\n"
+                    f"_Válido por 10 minutos._"
+                )
+                await enviar_texto(telefono, mensaje)
+            else:
+                await enviar_texto(telefono, "⚠️ Hubo un problema al generar el PIN de seguridad.")
+        else:
+            await enviar_texto(telefono, "❌ No se pudo generar el PIN. Tu número no está vinculado a una cuenta activa de Kipu.")
+        
+        # Limpiamos sesión y salimos de la función
+        await eliminar_sesion(telefono)
+        return
 
     # 3. DEscargar facturas
     if texto_usuario.startswith("descargar"):
