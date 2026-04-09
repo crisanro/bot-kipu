@@ -514,3 +514,31 @@ async def enviar_botones_mas_items(telefono: str, cantidad_items: int):
     async with httpx.AsyncClient() as client:
         resp = await client.post(META_API_URL, headers=HEADERS, json=payload)
         await _registrar_salida(telefono, "interactive", payload, resp.json())
+
+async def enviar_lista_apikeys(telefono: str, keys: list):
+    rows = []
+    for k in keys:
+        rows.append({
+            "id": f"delkey_{k['id']}",
+            "title": k['nombre'][:24], # WhatsApp limita a 24 caracteres
+            "description": f"Creada: {k['created_at'][:10]}"
+        })
+    
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": telefono,
+        "type": "interactive",
+        "interactive": {
+            "type": "list",
+            "header": {"type": "text", "text": "Eliminar API Key 🗑️"},
+            "body": {"text": "Selecciona la llave que deseas revocar. Te enviaremos un código de seguridad para confirmar."},
+            "footer": {"text": "Seguridad Kipu.ec"},
+            "action": {
+                "button": "Ver Llaves",
+                "sections": [{"title": "Llaves Activas", "rows": rows}]
+            }
+        }
+    }
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(META_API_URL, headers=HEADERS, json=payload)
+        await _registrar_salida(telefono, "interactive", payload, resp.json())
