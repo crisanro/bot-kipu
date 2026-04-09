@@ -49,3 +49,40 @@ async def emitir_factura_kipu(whatsapp_number: str, json_data: dict):
     except Exception as e:
         print(f"❌ Error al emitir factura: {e}")
         return {"ok": False, "estado": "ERROR", "mensaje": "Problemas de red al conectar con Kipu."}
+
+# Añade esto al final de kipu_api.py
+
+async def solicitar_pin_auth(email: str, whatsapp_number: str, tipo_accion: str, metadata: dict = None):
+    url = f"{KIPU_BASE_URL}/auth/request-pin"
+    headers = {
+        "x-n8n-key": KIPU_CORE_KEY, # Reutilizamos tu llave de seguridad interna
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "email": email,
+        "whatsapp_number": whatsapp_number,
+        "tipo_accion": tipo_accion,
+        "metadata": metadata or {}
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(url, headers=headers, json=payload)
+            return resp.json()
+    except Exception as e:
+        print(f"❌ Error al solicitar PIN 2FA: {e}")
+        return {"ok": False, "detail": "Error de red interna"}
+
+async def obtener_apikeys_bot(whatsapp_number: str):
+    """
+    Nota: Necesitarás crear un endpoint interno en FastAPI tipo 
+    GET /api-keys/internal/{whatsapp_number} que responda la lista de keys.
+    """
+    url = f"{KIPU_BASE_URL}/api-keys/internal/{whatsapp_number}"
+    headers = {"x-n8n-key": KIPU_CORE_KEY}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url, headers=headers)
+            return resp.json()
+    except Exception as e:
+        print(f"❌ Error al listar llaves: {e}")
+        return {"ok": False, "keys": []}
