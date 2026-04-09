@@ -128,10 +128,15 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
         validacion = await verificar_usuario_kipu(telefono)
         
         if validacion.get("status") == "ok":
-            correo = validacion.get("data", {}).get("email") # Asegúrate de que el API de Kipu retorne el 'email' en 'data'
             from kipu_api import solicitar_pin_auth
             
-            resp = await solicitar_pin_auth(correo, telefono, "CREAR_TOKEN", {"nombre": nombre_key})
+            # 🔥 CORREGIDO: Teléfono primero, luego acción, y por último la metadata. ¡No necesitamos correo!
+            resp = await solicitar_pin_auth(
+                whatsapp_number=telefono, 
+                tipo_accion="CREAR_TOKEN", 
+                metadata={"nombre": nombre_key}
+            )
+            
             if resp.get("ok"):
                 await enviar_texto(telefono, f"🔑 Solicitaste crear la llave '{nombre_key}'.\n\nIngresa este PIN en la web para generarla:\n\n*{resp['pin']}*")
             else:
@@ -161,7 +166,7 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
             # Guardamos sesión para atrapar la respuesta de la lista
             sesion = await obtener_sesion(telefono) or {"datos": validacion.get("data", {})}
             sesion["paso"] = "ESPERANDO_ELIMINAR_APIKEY"
-            sesion["datos"]["email"] = validacion.get("data", {}).get("email")
+            # (Ya no hace falta guardar el email aquí)
             await iniciar_temporizador(telefono, sesion)
         else:
             await enviar_texto(telefono, "⚠️ Tu número no está vinculado a una cuenta activa.")
