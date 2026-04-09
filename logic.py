@@ -123,7 +123,7 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
         return
 
     # 2. Crear API Key
-    if texto_usuario.startswith("apikey crear "):
+    if texto_usuario.startswith("apikey crear"):
         nombre_key = texto_usuario.replace("apikey crear ", "").strip()
         validacion = await verificar_usuario_kipu(telefono)
         
@@ -146,31 +146,34 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
         return
 
     # 3. Eliminar API Key (Inicia Flujo)
-    if texto_usuario == "apikey eliminar":
-        validacion = await verificar_usuario_kipu(telefono)
-        
-        if validacion.get("status") == "ok":
-            from kipu_api import obtener_apikeys_bot
-            from whatsapp import enviar_lista_apikeys
-            
-            await enviar_texto(telefono, "🔍 Buscando tus llaves activas...")
-            resp_keys = await obtener_apikeys_bot(telefono)
-            keys = resp_keys.get("keys", [])
-            
-            if not keys:
-                await enviar_texto(telefono, "No tienes API Keys activas en este momento.")
-                return
-                
-            await enviar_lista_apikeys(telefono, keys)
-            
-            # Guardamos sesión para atrapar la respuesta de la lista
-            sesion = await obtener_sesion(telefono) or {"datos": validacion.get("data", {})}
-            sesion["paso"] = "ESPERANDO_ELIMINAR_APIKEY"
-            # (Ya no hace falta guardar el email aquí)
-            await iniciar_temporizador(telefono, sesion)
-        else:
-            await enviar_texto(telefono, "⚠️ Tu número no está vinculado a una cuenta activa.")
-        return
+    elif "apikey eliminar" in texto_usuario.lower():
+    telefono = sesion.get("telefono")
+    
+    # 1. Informamos que estamos procesando
+    await enviar_texto(telefono, "🛡️ Generando código de seguridad para eliminación...")
+
+    # 2. Llamamos a la API para crear el PIN (usando solo el teléfono)
+    from kipu_api import solicitar_pin_auth
+    res = await solicitar_pin_auth(
+        whatsapp_number=telefono,
+        tipo_accion="ELIMINAR_TOKEN"
+    )
+
+    if res.get("ok"):
+        pin = res.get("pin")
+        # 3. Entregamos el PIN de una vez
+        mensaje = (
+            f"⚠️ *CÓDIGO DE ELIMINACIÓN*\n\n"
+            f"Tu PIN es: *{pin}*\n\n"
+            f"Ingresa este código en la plataforma web de KIPU para confirmar la revocación de tu API Key.\n"
+            f"_Válido por 10 minutos._"
+        )
+        await enviar_texto(telefono, mensaje)
+    else:
+        # Si el teléfono no está registrado en profiles, FastAPI devolverá error
+        await enviar_texto(telefono, "❌ No se pudo generar el PIN. Asegúrate de que tu número esté vinculado a tu cuenta de KIPU.")
+
+    await eliminar_sesion(telefono)
 
     # 3. DEscargar facturas
     if texto_usuario.startswith("descargar"):
@@ -615,19 +618,3 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
             await enviar_texto(telefono, "⚠️ No pude identificar el plan. Por favor selecciona uno de la lista o escribe *'Cancelar'*.")
 
 
-    elif paso == "ESPERANDO_ELIMINAR_APIKEY":
-        if id_interactivo and id_interactivo.startswith("delkey_"):
-            key_id = int(id_interactivo.split("_")[1])
-            correo = sesion["datos"].get("email")
-            
-            from kipu_api import solicitar_pin_auth
-            resp = await solicitar_pin_auth(correo, telefono, "ELIMINAR_TOKEN", {"key_id": key_id})
-            
-            if resp.get("ok"):
-                await enviar_texto(telefono, f"🗑️ Estás a punto de revocar una API Key.\n\nIngresa este PIN en la web de KIPU para confirmar la eliminación:\n\n*{resp['pin']}*")
-            else:
-                await enviar_texto(telefono, "⚠️ Hubo un error al generar el PIN de confirmación.")
-            
-            await eliminar_sesion(telefono) # Cerramos la sesión porque ya tiene el PIN
-        else:
-            await enviar_texto(telefono, "⚠️ Por favor selecciona una llave de la lista o escribe *Cancelar*.")
