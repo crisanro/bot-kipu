@@ -106,7 +106,68 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
     if tipo == "text":
         texto_usuario = mensaje_wa["text"]["body"].lower().strip()
 
-    # --- NUEVA LÓGICA: COMANDO DESCARGAR ---
+    # --- NUEVA LÓGICA DE SEGURIDAD Y 2FA ---
+    
+    # 1. Vincular WhatsApp
+    if texto_usuario.startswith("kipu_validar y vincular a "):
+        correo = texto_usuario.replace("kipu_validar y vincular a ", "").strip()
+        from kipu_api import solicitar_pin_auth
+        
+        await enviar_texto(telefono, "⏳ Procesando tu solicitud de seguridad...")
+        resp = await solicitar_pin_auth(correo, telefono, "VALIDAR_WS")
+        
+        if resp.get("ok"):
+            await enviar_texto(telefono, f"🔐 ¡Hola! Hemos generado tu código de seguridad.\n\nTu PIN es: *{resp['pin']}*\n\nRegresa a la plataforma web e ingrésalo para vincular este número.")
+        else:
+            await enviar_texto(telefono, "⚠️ No pudimos generar el código. Verifica que el enlace esté correcto.")
+        return
+
+    # 2. Crear API Key
+    if texto_usuario.startswith("apikey crear "):
+        nombre_key = texto_usuario.replace("apikey crear ", "").strip()
+        validacion = await verificar_usuario_kipu(telefono)
+        
+        if validacion.get("status") == "ok":
+            correo = validacion.get("data", {}).get("email") # Asegúrate de que el API de Kipu retorne el 'email' en 'data'
+            from kipu_api import solicitar_pin_auth
+            
+            resp = await solicitar_pin_auth(correo, telefono, "CREAR_TOKEN", {"nombre": nombre_key})
+            if resp.get("ok"):
+                await enviar_texto(telefono, f"🔑 Solicitaste crear la llave '{nombre_key}'.\n\nIngresa este PIN en la web para generarla:\n\n*{resp['pin']}*")
+            else:
+                await enviar_texto(telefono, "⚠️ Hubo un problema al generar el PIN de seguridad.")
+        else:
+            await enviar_texto(telefono, "⚠️ Tu número no está vinculado a una cuenta activa de Kipu.")
+        return
+
+    # 3. Eliminar API Key (Inicia Flujo)
+    if texto_usuario == "apikey eliminar":
+        validacion = await verificar_usuario_kipu(telefono)
+        
+        if validacion.get("status") == "ok":
+            from kipu_api import obtener_apikeys_bot
+            from whatsapp import enviar_lista_apikeys
+            
+            await enviar_texto(telefono, "🔍 Buscando tus llaves activas...")
+            resp_keys = await obtener_apikeys_bot(telefono)
+            keys = resp_keys.get("keys", [])
+            
+            if not keys:
+                await enviar_texto(telefono, "No tienes API Keys activas en este momento.")
+                return
+                
+            await enviar_lista_apikeys(telefono, keys)
+            
+            # Guardamos sesión para atrapar la respuesta de la lista
+            sesion = await obtener_sesion(telefono) or {"datos": validacion.get("data", {})}
+            sesion["paso"] = "ESPERANDO_ELIMINAR_APIKEY"
+            sesion["datos"]["email"] = validacion.get("data", {}).get("email")
+            await iniciar_temporizador(telefono, sesion)
+        else:
+            await enviar_texto(telefono, "⚠️ Tu número no está vinculado a una cuenta activa.")
+        return
+
+    # 3. DEscargar facturas
     if texto_usuario.startswith("descargar"):
         partes = texto_usuario.split() # Separa por espacios
         
@@ -547,3 +608,21 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
             await eliminar_sesion(telefono)
         else:
             await enviar_texto(telefono, "⚠️ No pude identificar el plan. Por favor selecciona uno de la lista o escribe *'Cancelar'*.")
+
+
+    elif paso == "ESPERANDO_ELIMINAR_APIKEY":
+        if id_interactivo and id_interactivo.startswith("delkey_"):
+            key_id = int(id_interactivo.split("_")[1])
+            correo = sesion["datos"].get("email")
+            
+            from kipu_api import solicitar_pin_auth
+            resp = await solicitar_pin_auth(correo, telefono, "ELIMINAR_TOKEN", {"key_id": key_id})
+            
+            if resp.get("ok"):
+                await enviar_texto(telefono, f"🗑️ Estás a punto de revocar una API Key.\n\nIngresa este PIN en la web de KIPU para confirmar la eliminación:\n\n*{resp['pin']}*")
+            else:
+                await enviar_texto(telefono, "⚠️ Hubo un error al generar el PIN de confirmación.")
+            
+            await eliminar_sesion(telefono) # Cerramos la sesión porque ya tiene el PIN
+        else:
+            await enviar_texto(telefono, "⚠️ Por favor selecciona una llave de la lista o escribe *Cancelar*.")
