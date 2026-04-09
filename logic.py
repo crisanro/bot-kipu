@@ -138,7 +138,14 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
             )
             
             if resp.get("ok"):
-                await enviar_texto(telefono, f"🔑 Solicitaste crear la llave '{nombre_key}'.\n\nIngresa este PIN en la web para generarla:\n\n*{resp['pin']}*")
+                pin = resp.get("pin")
+                mensaje = (
+                    f"⚠️ *CÓDIGO DE CREACIÓN*\n\n"
+                    f"Tu PIN es: *{pin}*\n\n"
+                    f"Ingresa este código en la plataforma de KIPU para confirmar la creación de tu API Key.\n"
+                    f"_Válido por 10 minutos._"
+                )
+                await enviar_texto(telefono, mensaje)
             else:
                 await enviar_texto(telefono, "⚠️ Hubo un problema al generar el PIN de seguridad.")
         else:
@@ -153,9 +160,6 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
         
         if validacion.get("status") == "ok":
             from kipu_api import solicitar_pin_auth
-            
-            # Informamos brevemente antes de lanzar el PIN
-            await enviar_texto(telefono, "🛡️ Generando código de seguridad para eliminación...")
 
             # Solicitamos el PIN para la acción de eliminar
             resp = await solicitar_pin_auth(
@@ -168,7 +172,7 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
                 mensaje = (
                     f"⚠️ *CÓDIGO DE ELIMINACIÓN*\n\n"
                     f"Tu PIN es: *{pin}*\n\n"
-                    f"Ingresa este código en la plataforma web de KIPU para confirmar la revocación de tu API Key.\n"
+                    f"Ingresa este código en la plataforma de KIPU para confirmar la revocación de tu API Key.\n"
                     f"_Válido por 10 minutos._"
                 )
                 await enviar_texto(telefono, mensaje)
