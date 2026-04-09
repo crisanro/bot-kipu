@@ -53,17 +53,21 @@ async def emitir_factura_kipu(whatsapp_number: str, json_data: dict):
 # Añade esto al final de kipu_api.py
 
 async def solicitar_pin_auth(email: str, whatsapp_number: str, tipo_accion: str, metadata: dict = None):
-    url = f"{KIPU_BASE_URL}/auth/request-pin"
+    url = f"{KIPU_BASE_URL}/request-pin"
     headers = {
         "x-n8n-key": KIPU_CORE_KEY, # Reutilizamos tu llave de seguridad interna
         "Content-Type": "application/json"
     }
     payload = {
-        "email": email,
         "whatsapp_number": whatsapp_number,
-        "tipo_accion": tipo_accion,
-        "metadata": metadata or {}
+        "tipo_accion": tipo_accion
     }
+    
+    if email:
+        payload["email"] = email
+    if metadata:
+        payload["metadata"] = metadata
+        
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(url, headers=headers, json=payload)
