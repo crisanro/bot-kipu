@@ -12,7 +12,7 @@ from whatsapp import (
     enviar_botones_iva, enviar_botones_mas_items,enviar_qr_seguimiento, enviar_documento_pdf,enviar_documento_xml
 )
 from redis_client import guardar_sesion, eliminar_sesion, obtener_sesion
-from kipu_api import verificar_usuario_kipu
+from kipu_api import verificar_usuario_kipu, solicitar_pin_auth
 from config import KIPU_FRONTEND_URL, KIPU_PAY_URL, SUPPORT_PHONE_NUMBER
 
 
@@ -111,10 +111,13 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
     # 1. Vincular WhatsApp
     if texto_usuario.startswith("kipu_validar y vincular a "):
         correo = texto_usuario.replace("kipu_validar y vincular a ", "").strip()
-        from kipu_api import solicitar_pin_auth
         
         await enviar_texto(telefono, "⏳ Procesando tu solicitud de seguridad...")
-        resp = await solicitar_pin_auth(correo, telefono, "VALIDAR_WS")
+        resp = await solicitar_pin_auth(
+            whatsapp_number=telefono,
+            tipo_accion="VALIDAR_WS",
+            email=correo
+        )
         
         if resp.get("ok"):
             await enviar_texto(telefono, f"🔐 ¡Hola! Hemos generado tu código de seguridad.\n\nTu PIN es: *{resp['pin']}*\n\nRegresa a la plataforma web e ingrésalo para vincular este número.")
