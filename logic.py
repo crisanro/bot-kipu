@@ -113,14 +113,14 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
         correo = texto_usuario.replace("kipu_validar y vincular a ", "").strip()
         
         await enviar_texto(telefono, "⏳ Procesando tu solicitud de seguridad...")
-        resp = await solicitar_pin_auth(
+        res_pin = await solicitar_pin_auth(
             whatsapp_number=telefono,
             tipo_accion="VALIDAR_WS",
             email=correo
         )
         
-        if resp.get("ok"):
-            await enviar_texto(telefono, f"🔐 ¡Hola! Hemos generado tu código de seguridad.\n\nTu PIN es: *{resp['pin']}*\n\nRegresa a la plataforma web e ingrésalo para vincular este número.")
+        if res_pin.get("ok"):
+            await enviar_texto(telefono, f"🔐 ¡Hola! Hemos generado tu código de seguridad.\n\nTu PIN es: *{res_pin['pin']}*\n\nRegresa a la plataforma web e ingrésalo para vincular este número.")
         else:
             await enviar_texto(telefono, "⚠️ No pudimos generar el código. Verifica que el enlace esté correcto.")
         return
@@ -131,7 +131,6 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
         validacion = await verificar_usuario_kipu(telefono)
         
         if validacion.get("status") == "ok":
-            from kipu_api import solicitar_pin_auth
             
             # 🔥 CORREGIDO: Teléfono primero, luego acción, y por último la metadata. ¡No necesitamos correo!
             resp = await solicitar_pin_auth(
@@ -162,7 +161,6 @@ async def procesar_conversacion(telefono: str, mensaje_wa: dict):
         validacion = await verificar_usuario_kipu(telefono)
         
         if validacion.get("status") == "ok":
-            from kipu_api import solicitar_pin_auth
 
             # Solicitamos el PIN para la acción de eliminar
             resp = await solicitar_pin_auth(
