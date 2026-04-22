@@ -3,7 +3,7 @@ import os
 from config import KIPU_BASE_URL, KIPU_CORE_KEY
 
 async def verificar_usuario_kipu(whatsapp_number: str):
-    url = f"{KIPU_BASE_URL}/admin/check-status"
+    url = f"{KIPU_BASE_URL}/check-status"
     params = {"whatsapp_number": whatsapp_number}
     headers = {"x-n8n-key": KIPU_CORE_KEY}
 
@@ -35,7 +35,7 @@ async def verificar_usuario_kipu(whatsapp_number: str):
     
 
 async def emitir_factura_kipu(whatsapp_number: str, json_data: dict):
-    url = f"{KIPU_BASE_URL}/admin/invoice-whatsapp"
+    url = f"{KIPU_BASE_URL}/invoice-whatsapp"
     headers = {
         "x-n8n-key": KIPU_CORE_KEY,
         "x-whatsapp-number": whatsapp_number,
@@ -52,7 +52,7 @@ async def emitir_factura_kipu(whatsapp_number: str, json_data: dict):
 
 
 async def solicitar_pin_auth(whatsapp_number: str, tipo_accion: str, email: str = None, metadata: dict = None):
-    url = f"{KIPU_BASE_URL}/admin/request-pin"
+    url = f"{KIPU_BASE_URL}/request-pin"
     headers = {
         "x-n8n-key": KIPU_CORE_KEY, # Reutilizamos tu llave de seguridad interna
         "Content-Type": "application/json"
